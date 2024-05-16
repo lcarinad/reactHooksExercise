@@ -1,23 +1,45 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import Button from "./Button";
 
 const Cards = () => {
   const [card, setCard] = useState(null);
-  let deck_id = "new";
+  const [remaining, setRemaining] = useState(52);
+  const deckIdRef = useRef(null);
+
+  const API_BASE_URL = "http://deckofcardsapi.com/api/deck";
+  //fetch a new shuffled deck when component mounts
   useEffect(() => {
     axios
-      .get(`https://deckofcardsapi.com/api/deck/${deck_id}/draw/?count=1`)
+      .get(`${API_BASE_URL}/new/shuffle/?deck_count=1`)
       .then((res) => {
-        deck_id = res.deck_id;
-        setCard(res.data.cards[0].image);
-      });
+        deckIdRef.current = res.data.deck_id;
+        setRemaining(res.data.remaining);
+      })
+      .catch((err) => console.error("Error fetching the deck:", err));
   }, []);
+
+  const draw = () => {
+    if (remaining === 0) {
+      alert("error: no cards remaining!");
+      return;
+    }
+    axios
+      .get(`${API_BASE_URL}/${deckIdRef.current}/draw/?count=1`)
+      .then((res) => {
+        if (res.data.success) {
+          setCard(res.data.cards[0].image);
+          setRemaining(res.data.remaining);
+        }
+      })
+      .catch((err) => console.error("Error drawing a card:", err));
+  };
   return (
     <div>
+      <Button draw={draw} />
       <h1>Cards</h1>
-      <div>
-        <img src={card} />
-      </div>
+      {/* we only render card if card is not null */}
+      <div>{card && <img src={card} alt="card" />}</div>
     </div>
   );
 };
